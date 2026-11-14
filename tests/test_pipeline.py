@@ -1,10 +1,13 @@
 import csv
+from io import StringIO
 from pathlib import Path
 
 import duckdb
 import pytest
 from rich.console import Console
+from rich.prompt import Prompt
 
+from menu import run_menu
 from pipeline.ingestion import ingest_csv
 from pipeline.marts import execute_marts
 from pipeline.reporting import render_gold_report
@@ -168,7 +171,12 @@ def test_arquivos_sql_dos_marts_geram_indicadores_gold(
 
     views = execute_marts(connection, MARTS_SQL)
 
-    assert views == ["gold_top_musicas", "gold_media_generos"]
+    assert views == [
+        "gold_top_musicas",
+        "gold_media_generos",
+        "gold_perfil_audio_generos",
+        "gold_top_artistas",
+    ]
     assert connection.execute(
         "SELECT track_name, popularity FROM gold_top_musicas ORDER BY popularity DESC"
     ).fetchall() == [
@@ -186,8 +194,45 @@ def test_arquivos_sql_dos_marts_geram_indicadores_gold(
         ("pop", 45.0, 2),
         ("rock", 87.5, 2),
     ]
+    assert connection.execute(
+        "SELECT track_genre, track_count, average_energy, average_danceability "
+        "FROM gold_perfil_audio_generos ORDER BY track_genre"
+    ).fetchall() == [
+        ("jazz", 2, 0.5, 0.6),
+        ("pop", 2, 0.5, 0.6),
+        ("rock", 2, 0.5, 0.6),
+    ]
+    assert connection.execute(
+        "SELECT artists, track_count FROM gold_top_artistas ORDER BY artists LIMIT 2"
+    ).fetchall() == [("Artist 0", 1), ("Artist 1", 1)]
 
     render_gold_report(connection, views, Console(record=True))
+
+
+def test_menu_apresenta_relatorios_gold_e_exibe_a_escolha(
+    connection,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    load_raw_csv(
+        connection,
+        tmp_path,
+        [make_track("Track", "Artist", "80")],
+    )
+    transform_to_silver(connection, SILVER_SQL)
+    views = execute_marts(connection, MARTS_SQL)
+    responses = iter(["3", "", "0"])
+    monkeypatch.setattr(Prompt, "ask", lambda *args, **kwargs: next(responses))
+    output = StringIO()
+
+    run_menu(connection, views, Console(file=output))
+
+    rendered = output.getvalue()
+    assert "[1] Top 5 músicas mais populares" in rendered
+    assert "[2] Popularidade média por gênero" in rendered
+    assert "[3] Perfil de áudio por gênero" in rendered
+    assert "[4] Artistas/créditos com mais faixas" in rendered
+    assert "Gold | Perfil Audio Generos" in rendered
 
 
 def test_ingest_csv_informa_quando_arquivo_nao_existe(

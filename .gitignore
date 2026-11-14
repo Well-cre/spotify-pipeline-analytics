@@ -1,10 +1,16 @@
-# Python-generated files
-__pycache__/
-*.py[oc]
-build/
-dist/
-wheels/
-*.egg-info
+# Ambiente Virtual
+.venv/
+env/
+venv/
 
-# Virtual environments
-.venv
+# Python / Cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+
+# Bancos de dados locais ou arquivos exportados
+*.duckdb
+data/
+*.log
