@@ -30,10 +30,7 @@ def run_menu(
     if not gold_view_names:
         raise ValueError("Nenhum relatório Gold foi carregado para o menu.")
 
-    options = {
-        str(number): view_name
-        for number, view_name in enumerate(gold_view_names, start=1)
-    }
+    options = {str(number): view_name for number, view_name in enumerate(gold_view_names, start=1)}
 
     # Adiciona a opção do gráfico interativo no final do menu
     chart_key = str(len(options) + 1)
@@ -86,9 +83,7 @@ def run_menu(
             )
 
         console.print("\n")
-        Prompt.ask(
-            "[dim]Pressione Enter para voltar ao menu principal...[/dim]", default=""
-        )
+        Prompt.ask("[dim]Pressione Enter para voltar ao menu principal...[/dim]", default="")
 
 
 def main() -> None:
@@ -106,9 +101,7 @@ def main() -> None:
     connection = duckdb.connect(":memory:")
 
     try:
-        console.print(
-            "[yellow]⏳ Executando pipeline (Bronze -> Silver -> Gold)...[/yellow]"
-        )
+        console.print("[yellow]⏳ Executando pipeline (Bronze -> Silver -> Gold)...[/yellow]")
 
         # 1. Camada Bronze
         ingest_csv(connection, dataset_path)
@@ -125,9 +118,7 @@ def main() -> None:
             project_root / "sql" / "marts",
         )
 
-        console.print(
-            "[green]✅ Pipeline executado com sucesso! Abrindo menu...[/green]"
-        )
+        console.print("[green]✅ Pipeline executado com sucesso! Abrindo menu...[/green]")
 
         # Abre o menu interativo com os relatórios e gráficos
         run_menu(connection, gold_view_names, console)
