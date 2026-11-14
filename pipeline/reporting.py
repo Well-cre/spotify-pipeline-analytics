@@ -1,4 +1,5 @@
 import duckdb
+import plotext as plt
 from rich.console import Console
 from rich.table import Table
 
@@ -26,3 +27,38 @@ def render_gold_report(
             table.add_row(*(str(value) if value is not None else "—" for value in row))
 
         console.print(table)
+
+
+def render_gold_chart(
+    connection: duckdb.DuckDBPyConnection,
+    console: Console,
+) -> None:
+    """Renderiza a popularidade média por gênero da view Gold no terminal."""
+    rows = connection.execute(
+        """
+        SELECT genre, media_popularidade
+        FROM gold_generos_populares
+        ORDER BY media_popularidade DESC
+        """
+    ).fetchall()
+
+    if not rows:
+        console.print("[yellow]Nenhum dado encontrado para gerar o gráfico.[/yellow]")
+        return
+
+    genres = [row[0] for row in rows]
+    popularity = [float(row[1]) for row in rows]
+    title = f"Top {len(rows)} gêneros por popularidade média"
+
+    figure = plt.figure
+    figure.clear()
+    figure.title(title)
+    figure.draw(
+        figure.bar(
+            genres,
+            popularity,
+            orientation="horizontal",
+            labeled=True,
+        )
+    )
+    figure.show()

@@ -17,7 +17,7 @@ REPORT_LABELS = {
     "gold_top_artistas": "Artistas com mais músicas registradas",
     "gold_mais_dancaveis": "Top 5 músicas mais dançáveis",
     "gold_maior_energia": "Top 5 músicas com maior energia",
-    "gold_generos_populares": "Top 5 gêneros por popularidade média",
+    "gold_generos_populares": "Top 10 gêneros por popularidade média",
 }
 
 

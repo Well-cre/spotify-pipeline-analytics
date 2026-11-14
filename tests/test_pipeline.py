@@ -7,10 +7,10 @@ import pytest
 from rich.console import Console
 from rich.prompt import Prompt
 
-from menu import run_menu
+from main import run_menu
 from pipeline.ingestion import ingest_csv
 from pipeline.marts import execute_marts
-from pipeline.reporting import render_gold_report
+from pipeline.reporting import render_gold_chart, render_gold_report
 from pipeline.transformation import transform_to_silver
 
 
@@ -176,6 +176,9 @@ def test_arquivos_sql_dos_marts_geram_indicadores_gold(
         "gold_media_generos",
         "gold_perfil_audio_generos",
         "gold_top_artistas",
+        "gold_generos_populares",
+        "gold_maior_energia",
+        "gold_mais_dancaveis",
     ]
     assert connection.execute(
         "SELECT track_name, popularity FROM gold_top_musicas ORDER BY popularity DESC"
@@ -228,11 +231,57 @@ def test_menu_apresenta_relatorios_gold_e_exibe_a_escolha(
     run_menu(connection, views, Console(file=output))
 
     rendered = output.getvalue()
-    assert "[1] Top 5 músicas mais populares" in rendered
-    assert "[2] Popularidade média por gênero" in rendered
-    assert "[3] Perfil de áudio por gênero" in rendered
-    assert "[4] Artistas/créditos com mais faixas" in rendered
+    assert "Top 5 músicas mais populares" in rendered
+    assert "Popularidade média por gênero" in rendered
+    assert "Perfil de áudio por gênero" in rendered
+    assert "Artistas/créditos com mais faixas" in rendered
+    assert "Top 10 gêneros por popularidade média" in rendered
+    assert "Top 5 músicas com maior energia" in rendered
+    assert "Top 5 músicas mais dançáveis" in rendered
+    assert "Gráfico de Barras: Gêneros por Popularidade Média" in rendered
     assert "Gold | Perfil Audio Generos" in rendered
+
+
+def test_grafico_de_barras_renderiza_dados_da_view_gold(
+    connection,
+    tmp_path: Path,
+    capfd: pytest.CaptureFixture[str],
+) -> None:
+    load_raw_csv(
+        connection,
+        tmp_path,
+        [
+            make_track(
+                f"Track {index}",
+                f"Artist {index}",
+                str(100 - index),
+                f"genre{index:02}",
+            )
+            for index in range(11)
+        ],
+    )
+    transform_to_silver(connection, SILVER_SQL)
+    execute_marts(connection, MARTS_SQL)
+    console_output = StringIO()
+
+    gold_genres = connection.execute(
+        """
+        SELECT genre
+        FROM gold_generos_populares
+        ORDER BY media_popularidade DESC
+        """
+    ).fetchall()
+    render_gold_chart(connection, Console(file=console_output))
+
+    chart_output = capfd.readouterr().out
+    assert len(gold_genres) == 10
+    assert [row[0] for row in gold_genres] == [
+        f"genre{index:02}" for index in range(10)
+    ]
+    assert "Top 10 gêneros por popularidade média" in chart_output
+    assert all(f"genre{index:02}" in chart_output for index in range(10))
+    assert "genre10" not in chart_output
+    assert "█" in chart_output
 
 
 def test_ingest_csv_informa_quando_arquivo_nao_existe(

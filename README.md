@@ -30,6 +30,7 @@ O pipeline é estritamente dividido em três camadas lógicas executadas em mem�
 * **Artistas com Mais Faixas:** Contagem e ranking de artistas com maior volume de registros no dataset (`gold_top_artistas.sql`).
 * **Músicas Mais Dançáveis:** Ranking focado na métrica de dançabilidade (`gold_mais_dancaveis.sql`).
 * **Músicas com Maior Energia:** Ranking focado no nível de energia técnica da faixa (`gold_maior_energia.sql`).
+* **Opção 8 — Gráfico de Barras:** Exibe os dez gêneros com maior popularidade média a partir da view Gold `gold_generos_populares`, renderizados com Plotext no terminal.
 
 ---
 
