@@ -5,4 +5,4 @@ SELECT
 FROM spotify_silver
 GROUP BY track_genre
 ORDER BY media_popularidade DESC
-LIMIT 5;
+LIMIT 10;
