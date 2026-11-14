@@ -1,0 +1,198 @@
+import csv
+from pathlib import Path
+
+import duckdb
+import pytest
+from rich.console import Console
+
+from pipeline.ingestion import ingest_csv
+from pipeline.marts import execute_marts
+from pipeline.reporting import render_gold_report
+from pipeline.transformation import transform_to_silver
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+SILVER_SQL = PROJECT_ROOT / "sql" / "silver" / "transform_tracks.sql"
+MARTS_SQL = PROJECT_ROOT / "sql" / "marts"
+CSV_COLUMNS = [
+    "track_name",
+    "artists",
+    "album_name",
+    "popularity",
+    "track_genre",
+    "energy",
+    "danceability",
+    "tempo",
+    "valence",
+]
+
+
+@pytest.fixture
+def connection():
+    database = duckdb.connect(":memory:")
+    try:
+        yield database
+    finally:
+        database.close()
+
+
+def load_raw_csv(connection, tmp_path: Path, records: list[dict[str, str]]) -> None:
+    csv_path = tmp_path / "tracks.csv"
+    with csv_path.open("w", encoding="utf-8", newline="") as csv_file:
+        writer = csv.DictWriter(csv_file, fieldnames=CSV_COLUMNS)
+        writer.writeheader()
+        writer.writerows(records)
+    ingest_csv(connection, csv_path)
+
+
+def make_track(
+    track_name: str,
+    artists: str,
+    popularity: str,
+    track_genre: str = "pop",
+    *,
+    album_name: str = "album",
+    energy: str = "0.5",
+    danceability: str = "0.6",
+    tempo: str = "120",
+    valence: str = "0.7",
+) -> dict[str, str]:
+    return {
+        "track_name": track_name,
+        "artists": artists,
+        "album_name": album_name,
+        "popularity": popularity,
+        "track_genre": track_genre,
+        "energy": energy,
+        "danceability": danceability,
+        "tempo": tempo,
+        "valence": valence,
+    }
+
+
+def test_bronze_preserva_colunas_e_valores_como_texto(
+    connection,
+    tmp_path: Path,
+) -> None:
+    load_raw_csv(
+        connection,
+        tmp_path,
+        [make_track("001", "Artist", "07", energy="0.5000")],
+    )
+
+    schema = connection.execute("DESCRIBE spotify_raw").fetchall()
+    values = connection.execute(
+        "SELECT track_name, popularity, energy FROM spotify_raw"
+    ).fetchone()
+
+    assert [column[0] for column in schema] == CSV_COLUMNS
+    assert {column[1] for column in schema} == {"VARCHAR"}
+    assert values == ("001", "07", "0.5000")
+
+
+def test_duplicata_por_nome_e_artista_mantem_maior_popularidade(
+    connection,
+    tmp_path: Path,
+) -> None:
+    load_raw_csv(
+        connection,
+        tmp_path,
+        [
+            make_track("Same Song", "Artist", "70", "first"),
+            make_track("Same Song", "Artist", "90", "second"),
+            make_track("Same Song", "Different Artist", "80"),
+        ],
+    )
+
+    transform_to_silver(connection, SILVER_SQL)
+
+    rows = connection.execute(
+        """
+        SELECT track_name, artists, popularity, track_genre
+        FROM spotify_silver
+        ORDER BY artists
+        """
+    ).fetchall()
+    assert rows == [
+        ("Same Song", "Artist", 90, "second"),
+        ("Same Song", "Different Artist", 80, "pop"),
+    ]
+    assert connection.execute(
+        "SELECT typeof(popularity), typeof(energy) FROM spotify_silver LIMIT 1"
+    ).fetchone() == ("INTEGER", "DOUBLE")
+
+
+def test_nulos_recebem_padrao_e_linhas_numericas_invalidas_sao_descartadas(
+    connection,
+    tmp_path: Path,
+) -> None:
+    load_raw_csv(
+        connection,
+        tmp_path,
+        [
+            make_track("", "", "", "", album_name="", energy="", danceability="", tempo="", valence=""),
+            make_track("Out of range", "Artist", "101"),
+            make_track("Bad audio", "Artist", "60", energy="invalid"),
+            make_track("Bad popularity", "Artist", "invalid"),
+        ],
+    )
+
+    transform_to_silver(connection, SILVER_SQL)
+
+    assert connection.execute(
+        """
+        SELECT track_name, artists, album_name, popularity, track_genre,
+               energy, danceability, tempo, valence
+        FROM spotify_silver
+        """
+    ).fetchall() == [
+        ("Desconhecido", "Desconhecido", "Desconhecido", 0, "Desconhecido", 0.0, 0.0, 0.0, 0.0)
+    ]
+
+
+def test_arquivos_sql_dos_marts_geram_indicadores_gold(
+    connection,
+    tmp_path: Path,
+) -> None:
+    load_raw_csv(
+        connection,
+        tmp_path,
+        [
+            make_track(f"Track {index}", f"Artist {index}", str(popularity), genre)
+            for index, (popularity, genre) in enumerate(
+                [(95, "rock"), (80, "rock"), (70, "jazz"), (60, "jazz"), (50, "pop"), (40, "pop")]
+            )
+        ],
+    )
+    transform_to_silver(connection, SILVER_SQL)
+
+    views = execute_marts(connection, MARTS_SQL)
+
+    assert views == ["gold_top_musicas", "gold_media_generos"]
+    assert connection.execute(
+        "SELECT track_name, popularity FROM gold_top_musicas ORDER BY popularity DESC"
+    ).fetchall() == [
+        ("Track 0", 95),
+        ("Track 1", 80),
+        ("Track 2", 70),
+        ("Track 3", 60),
+        ("Track 4", 50),
+    ]
+    assert connection.execute(
+        "SELECT track_genre, average_popularity, track_count "
+        "FROM gold_media_generos ORDER BY track_genre"
+    ).fetchall() == [
+        ("jazz", 65.0, 2),
+        ("pop", 45.0, 2),
+        ("rock", 87.5, 2),
+    ]
+
+    render_gold_report(connection, views, Console(record=True))
+
+
+def test_ingest_csv_informa_quando_arquivo_nao_existe(
+    connection,
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(FileNotFoundError, match="Arquivo CSV não encontrado"):
+        ingest_csv(connection, tmp_path / "missing.csv")
