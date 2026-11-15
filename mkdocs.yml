@@ -1,0 +1,24 @@
+site_name: Spotify Terminal Analytics Pipeline
+site_description: Documentação do pipeline de analytics de faixas do Spotify.
+site_url: https://well-cre.github.io/spotify-pipeline-analytics/
+repo_url: https://github.com/Well-cre/spotify-pipeline-analytics
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  language: pt-BR
+  features:
+    - navigation.sections
+    - search.highlight
+
+plugins:
+  - search
+
+markdown_extensions:
+  - pymdownx.snippets:
+      base_path: .
+      check_paths: true
+
+nav:
+  - Início: index.md
