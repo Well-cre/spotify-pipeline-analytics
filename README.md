@@ -31,6 +31,7 @@ para tipos numéricos.
 
 O repositório é organizado seguindo o padrão modular com `src/` e separação estrita de testes, documentação e fluxos de CI/CD:
 
+```text
 spotify-pipeline-analytics/
 ├── .github/workflows/   # Workflows do GitHub Actions (CI/CD e deploy do MkDocs)
 ├── docs/                # Arquivos Markdown da documentação oficial (MkDocs Material)
