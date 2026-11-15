@@ -39,6 +39,7 @@ def render_gold_chart(
         SELECT genre, media_popularidade
         FROM gold_generos_populares
         ORDER BY media_popularidade DESC
+        LIMIT 10
         """
     ).fetchall()
 
@@ -46,19 +47,22 @@ def render_gold_chart(
         console.print("[yellow]Nenhum dado encontrado para gerar o gráfico.[/yellow]")
         return
 
-    genres = [row[0] for row in rows]
-    popularity = [float(row[1]) for row in rows]
+    genres = [row[0] for row in reversed(rows)]
+    popularity = [float(row[1]) for row in reversed(rows)]
     title = f"Top {len(rows)} gêneros por popularidade média"
 
     figure = plt.figure
     figure.clear()
+    figure.plot_size(width=80, height=22)
     figure.title(title)
+
     figure.draw(
         figure.bar(
             genres,
             popularity,
             orientation="horizontal",
-            labeled=True,
+            width=0.25,
+            marker="█",
         )
     )
     figure.show()
