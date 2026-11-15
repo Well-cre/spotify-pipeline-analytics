@@ -27,6 +27,19 @@ Registros com popularidade fora do intervalo de 0 a 100 ou valores numéricos in
 descartados. Os campos de popularidade, energia, dançabilidade, tempo e valência são convertidos
 para tipos numéricos.
 
+## 📂 Estrutura do Projeto
+
+O repositório é organizado seguindo o padrão modular com `src/` e separação estrita de testes, documentação e fluxos de CI/CD:
+
+spotify-pipeline-analytics/
+├── .github/workflows/   # Workflows do GitHub Actions (CI/CD e deploy do MkDocs)
+├── docs/                # Arquivos Markdown da documentação oficial (MkDocs Material)
+├── src/                 # Código-fonte principal (Pipelines ETL, DuckDB e CLI)
+├── tests/               # Testes unitários robustos com pytest e pytest-mock
+├── pyproject.toml       # Configurações de dependências (uv) e linter (Ruff)
+├── uv.lock              # Lockfile de dependências do uv
+└── README.md            # Documentação principal e orientações de uso
+
 ## Camadas e indicadores
 
 O fluxo executa Bronze → Silver → Gold usando DuckDB em memória (`:memory:`). O banco não é

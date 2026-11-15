@@ -22,3 +22,4 @@ markdown_extensions:
 
 nav:
   - Início: index.md
+  - arquitetura: arquitetura.md
