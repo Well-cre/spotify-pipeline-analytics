@@ -3,7 +3,6 @@ from pathlib import Path
 
 import duckdb
 
-
 _MART_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
 
 

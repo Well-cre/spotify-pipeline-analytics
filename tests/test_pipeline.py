@@ -13,7 +13,6 @@ from pipeline.marts import execute_marts
 from pipeline.reporting import render_gold_chart, render_gold_report
 from pipeline.transformation import transform_to_silver
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SILVER_SQL = PROJECT_ROOT / "sql" / "silver" / "transform_tracks.sql"
 MARTS_SQL = PROJECT_ROOT / "sql" / "marts"
@@ -84,9 +83,7 @@ def test_bronze_preserva_colunas_e_valores_como_texto(
     )
 
     schema = connection.execute("DESCRIBE spotify_raw").fetchall()
-    values = connection.execute(
-        "SELECT track_name, popularity, energy FROM spotify_raw"
-    ).fetchone()
+    values = connection.execute("SELECT track_name, popularity, energy FROM spotify_raw").fetchone()
 
     assert [column[0] for column in schema] == CSV_COLUMNS
     assert {column[1] for column in schema} == {"VARCHAR"}
@@ -133,7 +130,9 @@ def test_nulos_recebem_padrao_e_linhas_numericas_invalidas_sao_descartadas(
         connection,
         tmp_path,
         [
-            make_track("", "", "", "", album_name="", energy="", danceability="", tempo="", valence=""),
+            make_track(
+                "", "", "", "", album_name="", energy="", danceability="", tempo="", valence=""
+            ),
             make_track("Out of range", "Artist", "101"),
             make_track("Bad audio", "Artist", "60", energy="invalid"),
             make_track("Bad popularity", "Artist", "invalid"),
@@ -275,9 +274,7 @@ def test_grafico_de_barras_renderiza_dados_da_view_gold(
 
     chart_output = capfd.readouterr().out
     assert len(gold_genres) == 10
-    assert [row[0] for row in gold_genres] == [
-        f"genre{index:02}" for index in range(10)
-    ]
+    assert [row[0] for row in gold_genres] == [f"genre{index:02}" for index in range(10)]
     assert "Top 10 gêneros por popularidade média" in chart_output
     assert all(f"genre{index:02}" in chart_output for index in range(10))
     assert "genre10" not in chart_output

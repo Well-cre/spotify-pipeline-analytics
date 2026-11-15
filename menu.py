@@ -29,10 +29,7 @@ def run_menu(
     if not gold_view_names:
         raise ValueError("Nenhum relatório Gold foi carregado para o menu.")
 
-    options = {
-        str(number): view_name
-        for number, view_name in enumerate(gold_view_names, start=1)
-    }
+    options = {str(number): view_name for number, view_name in enumerate(gold_view_names, start=1)}
 
     while True:
         console.clear()
@@ -74,9 +71,7 @@ def run_menu(
             )
 
         console.print("\n")
-        Prompt.ask(
-            "[dim]Pressione Enter para voltar ao menu principal...[/dim]", default=""
-        )
+        Prompt.ask("[dim]Pressione Enter para voltar ao menu principal...[/dim]", default="")
 
 
 def main() -> None:
@@ -95,9 +90,7 @@ def main() -> None:
 
     # Tratamento de erro crítico para todo o pipeline de engenharia de dados
     try:
-        console.print(
-            "[yellow]⏳ Executando pipeline (Bronze -> Silver -> Gold)...[/yellow]"
-        )
+        console.print("[yellow]⏳ Executando pipeline (Bronze -> Silver -> Gold)...[/yellow]")
 
         # 1. Camada Bronze
         ingest_csv(connection, dataset_path)
